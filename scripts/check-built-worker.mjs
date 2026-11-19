@@ -1,0 +1,12 @@
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs';
+import {createServer} from 'node:http';
+mkdirSync('.sites-runtime',{recursive:true});
+const db=new DatabaseSync(':memory:');
+for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())db.exec(readFileSync('drizzle/'+f,'utf8'));
+globalThis.__workerTestDB={prepare(sql){let values=[];return {bind(...v){values=v;return this;},async first(){return db.prepare(sql).get(...values)||null;},async all(){return {results:db.prepare(sql).all(...values)};},async run(){return db.prepare(sql).run(...values);}};}};
+const stub='data:text/javascript,'+encodeURIComponent('export const env={DB:globalThis.__workerTestDB};');
+const code=readFileSync('dist/server/index.js','utf8').replaceAll('"cloudflare:workers"',JSON.stringify(stub));
+writeFileSync('.sites-runtime/built-worker.mjs',code);
+const {default:worker}=await import('../.sites-runtime/built-worker.mjs');
+createServer(async(req,res)=>{const chunks=[];for await(const c of req)chunks.push(c);const request=new Request('http://127.0.0.1:5174'+req.url,{method:req.method,headers:req.headers,body:req.method==='GET'?undefined:Buffer.concat(chunks)});const response=await worker.fetch(request);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}).listen(5174,'127.0.0.1',()=>console.log('Built Worker test: http://127.0.0.1:5174'));
