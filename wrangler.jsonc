@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "friendship-tree",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-11-20",
+  "workers_dev": true,
+  "build": {
+    "command": "node scripts/build-portable.mjs"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "friendship-tree-db",
+      "database_id": "089dc49a-42f1-41c5-a39e-d20ca0a902ce",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}
